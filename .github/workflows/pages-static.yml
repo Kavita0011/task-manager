@@ -3,10 +3,9 @@ name: Deploy static site (no Jekyll)
 
 on:
   push:
-    branches: [ main ]          # run on every push to main
-  workflow_dispatch:            # allow manual runs from the UI
+    branches: [ main ]          # or whatever branch you publish
+  workflow_dispatch:            # manual trigger
 
-# Permissions needed for the built‑in Pages deployment action
 permissions:
   contents: read
   pages: write
@@ -14,45 +13,38 @@ permissions:
 
 jobs:
   # -------------------------------------------------
-  # 1️⃣  Build / copy step – creates the "_site" folder that GitHub Pages will publish
+  # Build / copy step – creates the folder GitHub Pages will publish
   # -------------------------------------------------
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Prepare a temporary folder that will become the published site
-      - name: Prepare publish folder
+      - name: Gather files for publishing
         run: |
+          # create the folder that Pages expects
           mkdir -p _site
 
-          # -------------------------------------------------
-          # Copy everything you want to publish
-          # -------------------------------------------------
-          # The folder you mentioned:
+          # copy everything you want to be publicly reachable
+          # (your source folder is resources/views/tasks/)
           cp -R resources/views/tasks/* _site/
 
-          # Optional: rename index.php → index.html so it becomes the homepage
+          # if you still have an index.php, rename it so browsers treat it as the home page
           if [ -f "_site/index.php" ]; then
             mv "_site/index.php" "_site/index.html"
           fi
 
-          # (If you have CSS/JS/images in other folders, copy them as well)
-          # cp -R public/css _site/css
-          # cp -R public/js  _site/js
-          # cp -R public/img _site/img
+          # add this file to disable Jekyll (important if you have any folder starting with "_")
+          touch _site/.nojekyll
 
-      # Upload the static folder as an artifact that the Pages action can consume
-      - name: Upload artifact
+      - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          # path to the folder you just built
           path: _site
 
   # -------------------------------------------------
-  # 2️⃣  Deploy step – publishes the artifact to GitHub Pages
+  # Deploy step – publishes the artifact to GitHub Pages
   # -------------------------------------------------
   deploy:
     needs: build
