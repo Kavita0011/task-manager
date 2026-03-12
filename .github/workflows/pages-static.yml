@@ -1,0 +1,66 @@
+# .github/workflows/pages-static.yml
+name: Deploy static site (no Jekyll)
+
+on:
+  push:
+    branches: [ main ]          # run on every push to main
+  workflow_dispatch:            # allow manual runs from the UI
+
+# Permissions needed for the built‑in Pages deployment action
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # -------------------------------------------------
+  # 1️⃣  Build / copy step – creates the "_site" folder that GitHub Pages will publish
+  # -------------------------------------------------
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Prepare a temporary folder that will become the published site
+      - name: Prepare publish folder
+        run: |
+          mkdir -p _site
+
+          # -------------------------------------------------
+          # Copy everything you want to publish
+          # -------------------------------------------------
+          # The folder you mentioned:
+          cp -R resources/views/tasks/* _site/
+
+          # Optional: rename index.php → index.html so it becomes the homepage
+          if [ -f "_site/index.php" ]; then
+            mv "_site/index.php" "_site/index.html"
+          fi
+
+          # (If you have CSS/JS/images in other folders, copy them as well)
+          # cp -R public/css _site/css
+          # cp -R public/js  _site/js
+          # cp -R public/img _site/img
+
+      # Upload the static folder as an artifact that the Pages action can consume
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # path to the folder you just built
+          path: _site
+
+  # -------------------------------------------------
+  # 2️⃣  Deploy step – publishes the artifact to GitHub Pages
+  # -------------------------------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
